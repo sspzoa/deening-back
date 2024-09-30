@@ -1,4 +1,4 @@
-fastapi[standard]
+fastapi[all]
 uvicorn[standard]
-pydantic[standard]
+python-dotenv
 openai
