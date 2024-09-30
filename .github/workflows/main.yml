@@ -55,7 +55,7 @@ jobs:
       - name: Docker run
         run: |
           docker stop ${{ env.NAME }} && docker rm ${{ env.NAME }} && docker rmi ${{ env.DOCKER_IMAGE }}:latest
-          docker run -d -p 8000:8001 --name ${{ github.repository_id }} --restart always \
+          docker run -d -p 8001:8001 --name ${{ github.repository_id }} --restart always \
             -e OPENAI_API_KEYL=${{ secrets.OPENAI_API_KEY }} \
             -e ACCESS_TOKEN=${{ secrets.ACCESS_TOKEN }} \
             ${{ env.DOCKER_IMAGE }}:latest
