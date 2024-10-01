@@ -11,6 +11,9 @@ class ErrorResponse(BaseModel):
 
 @router.post("/ingredient", response_model=IngredientResponse, responses={400: {"model": ErrorResponse}})
 async def get_ingredient_info(request: IngredientRequest):
+    """
+    식재료 정보와 이미지를 생성합니다.
+    """
     try:
         # 식재료 정보 생성 프롬프트
         ingredient_prompt = f"""제공된 식재료에 대한 정보를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:

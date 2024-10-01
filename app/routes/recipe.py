@@ -14,6 +14,9 @@ class ErrorResponse(BaseModel):
 
 @router.post("/recipe", response_model=RecipeResponse, responses={400: {"model": ErrorResponse}})
 async def get_recipe(request: RecipeRequest):
+    """
+    주어진 음식 이름에 대한 레시피를 생성합니다.
+    """
     try:
         # 레시피 생성 프롬프트
         recipe_prompt = f"""제공된 음식 이름에 대한 레시피를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
@@ -106,6 +109,9 @@ async def get_recipe(request: RecipeRequest):
 
 @router.get("/recipe/{recipe_id}", response_model=RecipeResponse, responses={404: {"model": ErrorResponse}})
 async def get_recipe_by_id(recipe_id: str):
+    """
+    주어진 ID에 대한 레시피를 반환합니다.
+    """
     if recipe_id not in recipe_store:
         raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
 

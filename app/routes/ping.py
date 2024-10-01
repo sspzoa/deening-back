@@ -5,4 +5,7 @@ router = APIRouter()
 
 @router.get("/ping", response_model=PingResponse)
 async def ping():
+    """
+    Health check endpoint
+    """
     return {"message": "pong"}

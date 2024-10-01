@@ -13,6 +13,9 @@ class ErrorResponse(BaseModel):
 
 @router.post("/cooking_step", response_model=CookingStepResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 async def get_cooking_step_info(request: CookingStepRequest):
+    """
+    레시피의 특정 조리 단계에 대한 상세 정보를 생성합니다.
+    """
     if request.recipe_id not in recipe_store:
         raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
 
