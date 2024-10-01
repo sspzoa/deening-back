@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.models.ingredient_models import IngredientRequest, Ingredient, IngredientResponse
+from app.models.recipe.ingredient_models import IngredientRequest, Ingredient, IngredientResponse
 from pydantic import BaseModel
 from app.config import client
 import json
@@ -36,6 +36,8 @@ async def get_ingredient_info(request: IngredientRequest):
         }}
 
         식재료 이름: {request.ingredient_name}
+        
+        주의: 반드시 유효한 JSON 형식으로 응답해주세요.
         """
 
         # 식재료 정보 생성

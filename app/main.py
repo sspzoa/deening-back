@@ -1,5 +1,7 @@
 from fastapi import FastAPI
-from app.routes import ping, recipe, ingredient, cooking_step
+from app.routes import ping
+from app.routes.food import ingredient_detect
+from app.routes.recipe import recipe, ingredient, cooking_step
 
 app = FastAPI(
     title="Deening API",
@@ -17,6 +19,11 @@ app = FastAPI(
 )
 
 app.include_router(ping.router)
+
+# Recipe
 app.include_router(recipe.router)
 app.include_router(ingredient.router)
 app.include_router(cooking_step.router)
+
+# Food
+app.include_router(ingredient_detect.router)
