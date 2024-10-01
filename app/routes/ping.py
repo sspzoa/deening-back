@@ -1,10 +1,7 @@
 from fastapi import APIRouter
-from pydantic import BaseModel
+from app.models.ping_models import PingResponse
 
 router = APIRouter()
-
-class PingResponse(BaseModel):
-    message: str
 
 @router.get("/ping", response_model=PingResponse)
 async def ping():
