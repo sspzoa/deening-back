@@ -12,7 +12,7 @@ recipe_store = {}
 class ErrorResponse(BaseModel):
     error: str
 
-@router.post("/recipe", response_model=RecipeResponse, responses={400: {"model": ErrorResponse}})
+@router.post("/recipe", tags=["Recipe"], response_model=RecipeResponse, responses={400: {"model": ErrorResponse}})
 async def get_recipe(request: RecipeRequest):
     """
     주어진 음식 이름에 대한 레시피를 생성합니다.
@@ -107,7 +107,7 @@ async def get_recipe(request: RecipeRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@router.get("/recipe/{recipe_id}", response_model=RecipeResponse, responses={404: {"model": ErrorResponse}})
+@router.get("/recipe/{recipe_id}", tags=["Recipe"], response_model=RecipeResponse, responses={404: {"model": ErrorResponse}})
 async def get_recipe_by_id(recipe_id: str):
     """
     주어진 ID에 대한 레시피를 반환합니다.

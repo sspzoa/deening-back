@@ -9,7 +9,7 @@ router = APIRouter()
 class ErrorResponse(BaseModel):
     error: str
 
-@router.post("/ingredient", response_model=IngredientResponse, responses={400: {"model": ErrorResponse}})
+@router.post("/ingredient", tags=["Recipe"], response_model=IngredientResponse, responses={400: {"model": ErrorResponse}})
 async def get_ingredient_info(request: IngredientRequest):
     """
     식재료 정보와 이미지를 생성합니다.
