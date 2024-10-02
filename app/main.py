@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from app.routes import ping
 from app.routes.food import ingredient_detect
 from app.routes.recipe import recipe, ingredient, cooking_step
+from app.dependencies.auth import verify_token
 
 app = FastAPI(
     title="Deening API",
@@ -18,12 +19,11 @@ app = FastAPI(
     },
 )
 
+# Public routes
 app.include_router(ping.router)
 
-# Recipe
-app.include_router(recipe.router)
-app.include_router(ingredient.router)
-app.include_router(cooking_step.router)
-
-# Food
-app.include_router(ingredient_detect.router)
+# Protected routes
+app.include_router(recipe.router, dependencies=[Depends(verify_token)])
+app.include_router(ingredient.router, dependencies=[Depends(verify_token)])
+app.include_router(cooking_step.router, dependencies=[Depends(verify_token)])
+app.include_router(ingredient_detect.router, dependencies=[Depends(verify_token)])
