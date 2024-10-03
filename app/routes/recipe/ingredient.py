@@ -37,7 +37,7 @@ async def get_ingredient_info(request: IngredientRequest):
 
         식재료 이름: {request.ingredient_name}
         
-        주의: 반드시 유효한 JSON 형식으로 응답해주세요.
+        주의: 반드시 다른 텍스트 없이 유효한 JSON 형식으로만 응답해주세요.
         """
 
         # 식재료 정보 생성

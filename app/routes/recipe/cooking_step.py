@@ -40,7 +40,7 @@ async def get_cooking_step_info(request: CookingStepRequest):
         단계 번호: {request.step_number}
         레시피: {recipe}
         
-        주의: 반드시 유효한 JSON 형식으로 응답해주세요.
+        주의: 반드시 다른 텍스트 없이 유효한 JSON 형식으로만 응답해주세요.
         """
 
         # 조리 과정 정보 생성
