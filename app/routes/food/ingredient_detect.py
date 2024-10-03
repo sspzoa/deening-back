@@ -1,18 +1,23 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException
-from pydantic import BaseModel
-import json
 import base64
+import json
 import logging
 
+from fastapi import APIRouter, File, UploadFile, HTTPException
+from pydantic import BaseModel
+
 from app.config import client
-from app.models.food.ingredient_detect_models import IngredientDetectResponse, DetectedIngredient, IngredientDetectRequest, NoIngredientsFoundResponse
+from app.models.food.ingredient_detect_models import IngredientDetectResponse, DetectedIngredient, \
+    NoIngredientsFoundResponse
 
 router = APIRouter()
+
 
 class ErrorResponse(BaseModel):
     error: str
 
-@router.post("/ingredient_detect", tags=["Food"], response_model=IngredientDetectResponse, responses={400: {"model": ErrorResponse}, 404: {"model": NoIngredientsFoundResponse}})
+
+@router.post("/ingredient_detect", tags=["Food"], response_model=IngredientDetectResponse,
+             responses={400: {"model": ErrorResponse}, 404: {"model": NoIngredientsFoundResponse}})
 async def ingredient_detect(image: UploadFile = File(...)):
     """
     업로드된 이미지 파일에서 식재료를 탐색해 반환합니다.
@@ -68,7 +73,8 @@ async def ingredient_detect(image: UploadFile = File(...)):
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="생성된 식재료 정보를 JSON으로 파싱할 수 없습니다.")
 
-        detected_ingredients = [DetectedIngredient(**ingredient) for ingredient in ingredient_detect_json["ingredients"]]
+        detected_ingredients = [DetectedIngredient(**ingredient) for ingredient in
+                                ingredient_detect_json["ingredients"]]
 
         if not detected_ingredients:
             return NoIngredientsFoundResponse(status_code=404)

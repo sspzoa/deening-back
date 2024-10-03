@@ -1,20 +1,24 @@
 from pydantic import BaseModel
 from typing import List
 
+
 class Ingredient(BaseModel):
     name: str
     amount: float
     unit: str
 
+
 class Instruction(BaseModel):
     step: int
     description: str
+
 
 class Nutrition(BaseModel):
     calories: int
     protein: str
     carbohydrates: str
     fat: str
+
 
 class Recipe(BaseModel):
     name: str
@@ -30,8 +34,10 @@ class Recipe(BaseModel):
     tags: List[str]
     source: str
 
+
 class RecipeRequest(BaseModel):
     food_name: str
+
 
 class RecipeResponse(BaseModel):
     id: str

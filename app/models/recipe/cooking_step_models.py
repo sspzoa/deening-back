@@ -1,9 +1,12 @@
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel
+
 
 class CookingStepRequest(BaseModel):
     recipe_id: str
     step_number: int
+
 
 class CookingStep(BaseModel):
     recipe_id: str
@@ -14,6 +17,8 @@ class CookingStep(BaseModel):
     ingredients_used: List[str]
     tips: str
 
+
 class CookingStepResponse(BaseModel):
+    id: str
     cooking_step: CookingStep
     image_url: str

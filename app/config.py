@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -11,3 +12,4 @@ load_dotenv(ENV_FILE)
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
 ACCESS_TOKEN = os.environ.get("ACCESS_TOKEN")
+MONGODB_URL = os.environ.get("MONGODB_URL")

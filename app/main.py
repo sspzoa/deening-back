@@ -1,8 +1,9 @@
 from fastapi import FastAPI, Depends
+
+from app.dependencies.auth import verify_token
 from app.routes import ping
 from app.routes.food import ingredient_detect
 from app.routes.recipe import recipe, ingredient, cooking_step
-from app.dependencies.auth import verify_token
 
 app = FastAPI(
     title="Deening API",

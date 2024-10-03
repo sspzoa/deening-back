@@ -1,21 +1,36 @@
-from fastapi import APIRouter, HTTPException
-from app.models.recipe.ingredient_models import IngredientRequest, Ingredient, IngredientResponse
-from pydantic import BaseModel
-from app.config import client
 import json
+
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from app.config import client as openai_client
+from app.database import ingredient_collection
+from app.models.recipe.ingredient_models import IngredientRequest, Ingredient, IngredientResponse
 
 router = APIRouter()
 
 class ErrorResponse(BaseModel):
     error: str
 
-@router.post("/ingredient", tags=["Recipe"], response_model=IngredientResponse, responses={400: {"model": ErrorResponse}})
-async def get_ingredient_info(request: IngredientRequest):
+@router.post("/ingredient", tags=["Recipe"], response_model=IngredientResponse,
+             responses={400: {"model": ErrorResponse}})
+async def get_or_create_ingredient(request: IngredientRequest):
     """
-    식재료 정보와 이미지를 생성합니다.
+    식재료 이름으로 검색하여 정보를 반환하거나, 없으면 새로 생성합니다.
     """
     try:
-        # 식재료 정보 생성 프롬프트
+        # 데이터베이스에서 재료 검색
+        ingredient_data = await ingredient_collection.find_one({"name": request.ingredient_name})
+
+        if ingredient_data:
+            # 이미 존재하는 재료 정보 반환
+            image_url = ingredient_data.pop('image_url', None)
+            ingredient_id = str(ingredient_data.pop('_id'))
+            ingredient = Ingredient(**ingredient_data)
+            return IngredientResponse(ingredient=ingredient, image_url=image_url, id=ingredient_id)
+
+        # 재료 정보가 없으면 새로 생성
         ingredient_prompt = f"""제공된 식재료에 대한 정보를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
 
         {{
@@ -40,8 +55,7 @@ async def get_ingredient_info(request: IngredientRequest):
         주의: 반드시 다른 텍스트 없이 유효한 JSON 형식으로만 응답해주세요.
         """
 
-        # 식재료 정보 생성
-        ingredient_response = client.chat.completions.create(
+        ingredient_response = openai_client.chat.completions.create(
             model="chatgpt-4o-latest",
             messages=[
                 {"role": "system", "content": "당신은 영양학 전문가입니다. 주어진 식재료에 대한 상세한 정보를 JSON 형식으로 제공합니다."},
@@ -52,7 +66,6 @@ async def get_ingredient_info(request: IngredientRequest):
         ingredient_json = json.loads(ingredient_response.choices[0].message.content)
         ingredient = Ingredient(**ingredient_json)
 
-        # 이미지 생성 프롬프트
         image_prompt = f"""A high-quality, detailed photo of {ingredient.name}, as described:
 
         - Category: {ingredient.category}
@@ -63,8 +76,7 @@ async def get_ingredient_info(request: IngredientRequest):
         If applicable, include some context that hints at its culinary uses or storage method.
         """
 
-        # DALL-E를 사용한 이미지 생성
-        image_response = client.images.generate(
+        image_response = openai_client.images.generate(
             model="dall-e-3",
             prompt=image_prompt,
             size="1024x1024",
@@ -72,11 +84,33 @@ async def get_ingredient_info(request: IngredientRequest):
             n=1,
         )
 
-        # 이미지 URL 가져오기
         image_url = image_response.data[0].url
 
-        return IngredientResponse(ingredient=ingredient, image_url=image_url)
+        ingredient_dict = ingredient.dict()
+        ingredient_dict['image_url'] = image_url
+        result = await ingredient_collection.insert_one(ingredient_dict)
+        ingredient_id = str(result.inserted_id)
+
+        return IngredientResponse(ingredient=ingredient, image_url=image_url, id=ingredient_id)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="생성된 식재료 정보를 JSON으로 파싱할 수 없습니다.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.get("/ingredient/{ingredient_id}", tags=["Recipe"], response_model=IngredientResponse,
+            responses={404: {"model": ErrorResponse}})
+async def get_ingredient_by_id(ingredient_id: str):
+    """
+    주어진 ID에 대한 식재료 정보를 반환합니다.
+    """
+    try:
+        ingredient_data = await ingredient_collection.find_one({"_id": ObjectId(ingredient_id)})
+        if not ingredient_data:
+            raise HTTPException(status_code=404, detail="식재료 정보를 찾을 수 없습니다.")
+
+        image_url = ingredient_data.pop('image_url', None)
+        ingredient_id = str(ingredient_data.pop('_id'))
+        ingredient = Ingredient(**ingredient_data)
+        return IngredientResponse(ingredient=ingredient, image_url=image_url, id=ingredient_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

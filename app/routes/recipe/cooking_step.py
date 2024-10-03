@@ -1,29 +1,47 @@
-from fastapi import APIRouter, HTTPException
-from app.models.recipe.cooking_step_models import CookingStepRequest, CookingStep, CookingStepResponse
-from pydantic import BaseModel
-from app.config import client
 import json
 
-from app.routes.recipe.recipe import recipe_store
+from bson import ObjectId
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from app.config import client as openai_client
+from app.database import recipe_collection, cooking_step_collection
+from app.models.recipe.cooking_step_models import CookingStepRequest, CookingStep, CookingStepResponse
 
 router = APIRouter()
+
 
 class ErrorResponse(BaseModel):
     error: str
 
-@router.post("/cooking_step", tags=["Recipe"],  response_model=CookingStepResponse, responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
-async def get_cooking_step_info(request: CookingStepRequest):
-    """
-    레시피의 특정 조리 단계에 대한 상세 정보를 생성합니다.
-    """
-    if request.recipe_id not in recipe_store:
-        raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
 
-    stored_data = recipe_store[request.recipe_id]
-    recipe = stored_data["recipe"]
-
+@router.post("/cooking_step", tags=["Recipe"], response_model=CookingStepResponse,
+             responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+async def get_or_create_cooking_step_info(request: CookingStepRequest):
+    """
+    레시피의 특정 조리 단계에 대한 상세 정보를 반환하거나 생성합니다.
+    """
     try:
-        # 조리 과정 정보 생성 프롬프트
+        # 기존 조리 단계 정보 검색
+        existing_step = await cooking_step_collection.find_one({
+            "recipe_id": request.recipe_id,
+            "step_number": request.step_number
+        })
+
+        if existing_step:
+            # 기존 정보가 있으면 그대로 반환
+            cooking_step = CookingStep(**existing_step)
+            return CookingStepResponse(
+                id=str(existing_step['_id']),
+                cooking_step=cooking_step,
+                image_url=existing_step.get('image_url')
+            )
+
+        # 기존 정보가 없으면 새로 생성
+        recipe = await recipe_collection.find_one({"_id": ObjectId(request.recipe_id)})
+        if not recipe:
+            raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
+
         cooking_step_prompt = f"""제공된 레시피에 대한 자세한 조리 과정 정보를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
 
         {{
@@ -43,8 +61,7 @@ async def get_cooking_step_info(request: CookingStepRequest):
         주의: 반드시 다른 텍스트 없이 유효한 JSON 형식으로만 응답해주세요.
         """
 
-        # 조리 과정 정보 생성
-        cooking_step_response = client.chat.completions.create(
+        cooking_step_response = openai_client.chat.completions.create(
             model="chatgpt-4o-latest",
             messages=[
                 {"role": "system", "content": "당신은 전문 요리사입니다. 주어진 레시피의 특정 조리 단계에 대한 상세한 정보를 JSON 형식으로 제공합니다."},
@@ -55,8 +72,7 @@ async def get_cooking_step_info(request: CookingStepRequest):
         cooking_step_json = json.loads(cooking_step_response.choices[0].message.content)
         cooking_step = CookingStep(**cooking_step_json)
 
-        # 이미지 생성 프롬프트
-        image_prompt = f"""A high-quality, detailed photo demonstrating the cooking step for {recipe.name}, step number {cooking_step.step_number}:
+        image_prompt = f"""A high-quality, detailed photo demonstrating the cooking step for {recipe['name']}, step number {cooking_step.step_number}:
 
         - Description: {cooking_step.description}
         - Tools used: {', '.join(cooking_step.tools_needed)}
@@ -67,8 +83,7 @@ async def get_cooking_step_info(request: CookingStepRequest):
         The image should be from a slightly elevated angle to give a clear view of the cooking surface and the chef's hands (if applicable).
         """
 
-        # DALL-E를 사용한 이미지 생성
-        image_response = client.images.generate(
+        image_response = openai_client.images.generate(
             model="dall-e-3",
             prompt=image_prompt,
             size="1024x1024",
@@ -76,11 +91,36 @@ async def get_cooking_step_info(request: CookingStepRequest):
             n=1,
         )
 
-        # 이미지 URL 가져오기
         image_url = image_response.data[0].url
 
-        return CookingStepResponse(cooking_step=cooking_step, image_url=image_url)
+        cooking_step_dict = cooking_step.dict()
+        cooking_step_dict['image_url'] = image_url
+        result = await cooking_step_collection.insert_one(cooking_step_dict)
+        cooking_step_id = str(result.inserted_id)
+
+        print(cooking_step_response)
+        print(image_response)
+
+        return CookingStepResponse(id=cooking_step_id, cooking_step=cooking_step, image_url=image_url)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="생성된 조리 과정 정보를 JSON으로 파싱할 수 없습니다.")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/cooking_step/{cooking_step_id}", tags=["Recipe"], response_model=CookingStepResponse,
+            responses={404: {"model": ErrorResponse}})
+async def get_cooking_step_by_id(cooking_step_id: str):
+    """
+    주어진 ID에 대한 조리 단계 정보를 반환합니다.
+    """
+    try:
+        cooking_step_data = await cooking_step_collection.find_one({"_id": ObjectId(cooking_step_id)})
+        if not cooking_step_data:
+            raise HTTPException(status_code=404, detail="조리 단계 정보를 찾을 수 없습니다.")
+
+        image_url = cooking_step_data.pop('image_url', None)
+        cooking_step = CookingStep(**cooking_step_data)
+        return CookingStepResponse(id=str(cooking_step_data['_id']), cooking_step=cooking_step, image_url=image_url)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
