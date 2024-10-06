@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.config import client as openai_client
 from app.database import ingredient_collection
 from app.models.recipe.ingredient_models import IngredientRequest, Ingredient, IngredientResponse
+from app.utils.image_utils import download_and_encode_image
 
 router = APIRouter()
 
@@ -25,10 +26,10 @@ async def get_or_create_ingredient(request: IngredientRequest):
 
         if ingredient_data:
             # 이미 존재하는 재료 정보 반환
-            image_url = ingredient_data.pop('image_url', None)
+            image_base64 = ingredient_data.pop('image_base64', None)
             ingredient_id = str(ingredient_data.pop('_id'))
             ingredient = Ingredient(**ingredient_data)
-            return IngredientResponse(ingredient=ingredient, image_url=image_url, id=ingredient_id)
+            return IngredientResponse(ingredient=ingredient, image_base64=image_base64, id=ingredient_id)
 
         # 재료 정보가 없으면 새로 생성
         ingredient_prompt = f"""제공된 식재료에 대한 정보를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
@@ -52,7 +53,7 @@ async def get_or_create_ingredient(request: IngredientRequest):
 
         식재료 이름: {request.ingredient_name}
         
-        주의: 반드시 다른 텍스트 없이 유효한 JSON 형식으로만 응답해주세요.
+        주의: 반드시 다른 텍스트나 코드블록 없이 유효한 JSON 형식으로만 응답해주세요.
         """
 
         ingredient_response = openai_client.chat.completions.create(
@@ -85,13 +86,14 @@ async def get_or_create_ingredient(request: IngredientRequest):
         )
 
         image_url = image_response.data[0].url
+        image_base64 = 'data:image/png;base64,' + download_and_encode_image(image_url)  # 이미지 다운로드 및 Base64 인코딩
 
-        ingredient_dict = ingredient.dict()
-        ingredient_dict['image_url'] = image_url
+        ingredient_dict = ingredient.model_dump()
+        ingredient_dict['image_base64'] = image_base64  # URL 대신 Base64 인코딩된 이미지 저장
         result = await ingredient_collection.insert_one(ingredient_dict)
         ingredient_id = str(result.inserted_id)
 
-        return IngredientResponse(ingredient=ingredient, image_url=image_url, id=ingredient_id)
+        return IngredientResponse(ingredient=ingredient, image_base64=image_base64, id=ingredient_id)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="생성된 식재료 정보를 JSON으로 파싱할 수 없습니다.")
     except Exception as e:
@@ -108,9 +110,9 @@ async def get_ingredient_by_id(ingredient_id: str):
         if not ingredient_data:
             raise HTTPException(status_code=404, detail="식재료 정보를 찾을 수 없습니다.")
 
-        image_url = ingredient_data.pop('image_url', None)
+        image_base64 = ingredient_data.pop('image_base64', None)
         ingredient_id = str(ingredient_data.pop('_id'))
         ingredient = Ingredient(**ingredient_data)
-        return IngredientResponse(ingredient=ingredient, image_url=image_url, id=ingredient_id)
+        return IngredientResponse(ingredient=ingredient, image_base64=image_base64, id=ingredient_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

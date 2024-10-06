@@ -21,4 +21,4 @@ class CookingStep(BaseModel):
 class CookingStepResponse(BaseModel):
     id: str
     cooking_step: CookingStep
-    image_url: str
+    image_base64: str

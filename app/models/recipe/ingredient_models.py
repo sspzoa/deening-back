@@ -29,4 +29,4 @@ class Ingredient(BaseModel):
 class IngredientResponse(BaseModel):
     id: str
     ingredient: Ingredient
-    image_url: str
+    image_base64: str

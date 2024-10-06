@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from typing import List
+
+from pydantic import BaseModel
 
 
 class Ingredient(BaseModel):
@@ -42,4 +43,4 @@ class RecipeRequest(BaseModel):
 class RecipeResponse(BaseModel):
     id: str
     recipe: Recipe
-    image_url: str
+    image_base64: str
