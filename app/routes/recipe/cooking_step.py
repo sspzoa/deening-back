@@ -2,17 +2,14 @@ import json
 
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 
 from app.config import client as openai_client
 from app.database import recipe_collection, cooking_step_collection
+from app.models.error_models import ErrorResponse
 from app.models.recipe.cooking_step_models import CookingStepRequest, CookingStep, CookingStepResponse
 from app.utils.image_utils import download_and_encode_image
 
 router = APIRouter()
-
-class ErrorResponse(BaseModel):
-    error: str
 
 @router.post("/cooking_step", tags=["Recipe"], response_model=CookingStepResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})

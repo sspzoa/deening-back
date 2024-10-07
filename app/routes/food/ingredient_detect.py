@@ -3,17 +3,14 @@ import json
 import logging
 
 from fastapi import APIRouter, File, UploadFile, HTTPException
-from pydantic import BaseModel
 
 from app.config import client
+from app.models.error_models import ErrorResponse
 from app.models.food.ingredient_detect_models import IngredientDetectResponse, DetectedIngredient, \
     NoIngredientsFoundResponse
 
 router = APIRouter()
 
-
-class ErrorResponse(BaseModel):
-    error: str
 
 
 @router.post("/ingredient_detect", tags=["Food"], response_model=IngredientDetectResponse,
