@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends
+from fastapi.staticfiles import StaticFiles
 
 from app.dependencies.auth import verify_token
-from app.routes import ping
+from app.routes import ping, root
 from app.routes.food import ingredient_detect
 from app.routes.recipe import recipe, ingredient, cooking_step
 
@@ -20,7 +21,11 @@ app = FastAPI(
     },
 )
 
+# Static files configuration
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
 # Public routes
+app.include_router(root.router)
 app.include_router(ping.router)
 
 # Protected routes
