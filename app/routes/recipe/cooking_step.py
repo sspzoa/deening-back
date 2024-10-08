@@ -38,6 +38,13 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
         if not recipe:
             raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
 
+        # 레시피의 필요한 정보만 추출
+        recipe_context = {
+            "name": recipe['name'],
+            "ingredients": recipe['ingredients'],
+            "instructions": recipe['instructions'][request.step_number - 1] if request.step_number <= len(recipe['instructions']) else None
+        }
+
         cooking_step_prompt = f"""제공된 레시피에 대한 자세한 조리 과정 정보를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
 
         {{
@@ -52,7 +59,7 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
 
         레시피 ID: {request.recipe_id}
         단계 번호: {request.step_number}
-        레시피: {recipe}
+        레시피 정보: {json.dumps(recipe_context, ensure_ascii=False)}
         
         주의: 반드시 다른 텍스트나 코드블록 없이 유효한 JSON 형식으로만 응답해주세요.
         """
@@ -68,7 +75,7 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
         cooking_step_json = json.loads(cooking_step_response.choices[0].message.content)
         cooking_step = CookingStep(**cooking_step_json)
 
-        image_prompt = f"""A high-quality, detailed photo demonstrating the cooking step for {recipe['name']}, step number {cooking_step.step_number}:
+        image_prompt = f"""A high-quality, detailed photo demonstrating the cooking step for {recipe_context['name']}, step number {cooking_step.step_number}:
 
         - Description: {cooking_step.description}
         - Tools used: {', '.join(cooking_step.tools_needed)}
