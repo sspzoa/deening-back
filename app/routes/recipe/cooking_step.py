@@ -51,10 +51,6 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
           "recipe_id": "레시피 ID",
           "step_number": 단계 번호,
           "description": "조리 과정에 대한 상세한 설명",
-          "duration": "예상 소요 시간",
-          "tools_needed": ["도구1", "도구2", "도구3"],
-          "ingredients_used": ["재료1", "재료2", "재료3"],
-          "tips": "이 단계를 위한 요리 팁"
         }}
 
         레시피 ID: {request.recipe_id}

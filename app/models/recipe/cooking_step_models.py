@@ -12,10 +12,6 @@ class CookingStep(BaseModel):
     recipe_id: str
     step_number: int
     description: str
-    duration: str
-    tools_needed: List[str]
-    ingredients_used: List[str]
-    tips: str
 
 
 class CookingStepResponse(BaseModel):

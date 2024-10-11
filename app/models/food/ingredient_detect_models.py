@@ -8,12 +8,8 @@ class IngredientDetectRequest(BaseModel):
     image: UploadFile
 
 
-class DetectedIngredient(BaseModel):
-    ingredient_name: str
-
-
 class IngredientDetectResponse(BaseModel):
-    ingredients: List[DetectedIngredient]
+    ingredients: List[str]
 
 
 class NoIngredientsFoundResponse(BaseModel):

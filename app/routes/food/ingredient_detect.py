@@ -6,14 +6,12 @@ from fastapi import APIRouter, File, UploadFile, HTTPException
 
 from app.config import client
 from app.models.error_models import ErrorResponse
-from app.models.food.ingredient_detect_models import IngredientDetectResponse, DetectedIngredient, \
-    NoIngredientsFoundResponse
+from app.models.food.ingredient_detect_models import IngredientDetectResponse, NoIngredientsFoundResponse
 
 router = APIRouter()
 
-
-
-@router.post("/ingredient_detect", tags=["Food"], response_model=IngredientDetectResponse,
+@router.post("/ingredient_detect", tags=["Food"],
+             response_model=IngredientDetectResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": NoIngredientsFoundResponse}})
 async def ingredient_detect(image: UploadFile = File(...)):
     """
@@ -32,9 +30,9 @@ async def ingredient_detect(image: UploadFile = File(...)):
 
         {{
           "ingredients": [
-            {{"ingredient_name": "식재료1"}},
-            {{"ingredient_name": "식재료2"}},
-            {{"ingredient_name": "식재료3"}}
+            "식재료1",
+            "식재료2",
+            "식재료3"
           ]
         }}
 
@@ -67,14 +65,12 @@ async def ingredient_detect(image: UploadFile = File(...)):
 
         try:
             ingredient_detect_json = json.loads(ingredient_detect_response.choices[0].message.content)
+            detected_ingredients = ingredient_detect_json.get("ingredients", [])
         except json.JSONDecodeError:
             raise HTTPException(status_code=400, detail="생성된 식재료 정보를 JSON으로 파싱할 수 없습니다.")
 
-        detected_ingredients = [DetectedIngredient(**ingredient) for ingredient in
-                                ingredient_detect_json["ingredients"]]
-
         if not detected_ingredients:
-            return NoIngredientsFoundResponse(status_code=404)
+            return NoIngredientsFoundResponse()
 
         return IngredientDetectResponse(ingredients=detected_ingredients)
 

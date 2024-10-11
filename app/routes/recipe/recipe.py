@@ -32,11 +32,13 @@ async def get_or_create_recipe(request: RecipeRequest):
         {{
           "name": "레시피 이름",
           "description": "레시피에 대한 간단한 설명",
-          "servings": 인분 수(정수),
-          "prepTime": "준비 시간",
           "cookTime": "조리 시간",
-          "totalTime": "총 소요 시간",
-          "difficulty": "난이도",
+          "nutrition": {{
+            "calories": 칼로리(정수),
+            "protein": "단백질(g)",
+            "carbohydrates": "탄수화물(g)",
+            "fat": "지방(g)"
+          }},
           "ingredients": [
             {{
               "name": "재료 이름",
@@ -50,14 +52,6 @@ async def get_or_create_recipe(request: RecipeRequest):
               "description": "단계 설명"
             }}
           ],
-          "nutrition": {{
-            "calories": 칼로리(정수),
-            "protein": "단백질(g)",
-            "carbohydrates": "탄수화물(g)",
-            "fat": "지방(g)"
-          }},
-          "tags": ["태그1", "태그2", "태그3"],
-          "source": "출처 또는 원작자"
         }}
 
         음식 이름: {request.food_name}

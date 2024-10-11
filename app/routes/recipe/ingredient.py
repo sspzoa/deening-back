@@ -33,19 +33,7 @@ async def get_or_create_ingredient(request: IngredientRequest):
 
         {{
           "name": "식재료 이름",
-          "description": "식재료에 대한 간단한 설명",
-          "category": "식재료 카테고리",
-          "nutritional_info": {{
-            "calories": 100g당 칼로리(정수),
-            "protein": 단백질(g),
-            "carbohydrates": 탄수화물(g),
-            "fat": 지방(g),
-            "fiber": 식이섬유(g),
-            "vitamins": "주요 비타민",
-            "minerals": "주요 미네랄"
-          }},
-          "storage_tips": "보관 방법",
-          "culinary_uses": ["요리법1", "요리법2", "요리법3"]
+          "description": "식재료에 대한 설명",
         }}
 
         식재료 이름: {request.ingredient_name}

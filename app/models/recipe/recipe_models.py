@@ -24,16 +24,10 @@ class Nutrition(BaseModel):
 class Recipe(BaseModel):
     name: str
     description: str
-    servings: int
-    prepTime: str
     cookTime: str
-    totalTime: str
-    difficulty: str
+    nutrition: Nutrition
     ingredients: List[Ingredient]
     instructions: List[Instruction]
-    nutrition: Nutrition
-    tags: List[str]
-    source: str
 
 
 class RecipeRequest(BaseModel):
