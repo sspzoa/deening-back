@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/recipe", tags=["Recipe"], response_model=RecipeResponse, responses={400: {"model": ErrorResponse}})
-async def get_or_create_recipe(request: RecipeRequest):
+async def get_recipe(request: RecipeRequest):
     """
     주어진 음식 이름에 대한 레시피를 검색하거나 생성합니다.
     """

@@ -12,9 +12,9 @@ from app.utils.image_utils import download_and_encode_image
 router = APIRouter()
 
 
-@router.post("/cooking_step", tags=["Recipe"], response_model=CookingStepResponse,
+@router.post("/recipe/cooking_step", tags=["Recipe"], response_model=CookingStepResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
-async def get_or_create_cooking_step_info(request: CookingStepRequest):
+async def get_cooking_step_info(request: CookingStepRequest):
     """
     레시피의 특정 조리 단계에 대한 상세 정보를 반환하거나 생성합니다.
     """

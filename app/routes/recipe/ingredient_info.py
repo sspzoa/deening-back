@@ -5,15 +5,15 @@ from fastapi import APIRouter, HTTPException
 from app.config import client as openai_client
 from app.database import ingredient_collection
 from app.models.error_models import ErrorResponse
-from app.models.recipe.ingredient_models import IngredientRequest, Ingredient, IngredientResponse
+from app.models.recipe.ingredient_info_models import IngredientRequest, Ingredient, IngredientResponse
 from app.utils.image_utils import download_and_encode_image
 
 router = APIRouter()
 
 
-@router.post("/ingredient", tags=["Recipe"], response_model=IngredientResponse,
+@router.post("/recipe/ingredient-info", tags=["Recipe"], response_model=IngredientResponse,
              responses={400: {"model": ErrorResponse}})
-async def get_or_create_ingredient(request: IngredientRequest):
+async def get_ingredient_info(request: IngredientRequest):
     """
     식재료 이름으로 검색하여 정보를 반환하거나, 없으면 새로 생성합니다.
     """

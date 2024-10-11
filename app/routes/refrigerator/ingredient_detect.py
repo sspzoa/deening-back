@@ -11,7 +11,7 @@ from app.models.refrigerator.ingredient_detect_models import IngredientDetectRes
 router = APIRouter()
 
 
-@router.post("/ingredient_detect", tags=["Refrigerator"],
+@router.post("/refrigerator/ingredient_detect", tags=["Refrigerator"],
              response_model=IngredientDetectResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": NoIngredientsFoundResponse}})
 async def ingredient_detect(image: UploadFile = File(...)):

@@ -3,8 +3,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.dependencies.auth import verify_token
 from app.routes import ping, root
-from app.routes.recipe import recipe, ingredient, cooking_step
-from app.routes.refrigerator import ingredient_detect
+from app.routes.recipe import recipe, ingredient_info, cooking_step
+from app.routes.refrigerator import ingredient_detect, refrigerator
 
 app = FastAPI(
     title="Deening API",
@@ -30,6 +30,8 @@ app.include_router(ping.router)
 
 # Protected routes
 app.include_router(recipe.router, dependencies=[Depends(verify_token)])
-app.include_router(ingredient.router, dependencies=[Depends(verify_token)])
+app.include_router(ingredient_info.router, dependencies=[Depends(verify_token)])
 app.include_router(cooking_step.router, dependencies=[Depends(verify_token)])
 app.include_router(ingredient_detect.router, dependencies=[Depends(verify_token)])
+
+app.include_router(refrigerator.router, dependencies=[Depends(verify_token)])
