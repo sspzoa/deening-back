@@ -5,6 +5,7 @@ from app.dependencies.auth import verify_token
 from app.routes import ping, root
 from app.routes.recipe import recipe, ingredient_info, cooking_step
 from app.routes.refrigerator import ingredient_detect, refrigerator
+from app.routes.refrigerator import rearrange_refrigerator
 
 app = FastAPI(
     title="Deening API",
@@ -35,3 +36,4 @@ app.include_router(cooking_step.router, dependencies=[Depends(verify_token)])
 app.include_router(ingredient_detect.router, dependencies=[Depends(verify_token)])
 
 app.include_router(refrigerator.router, dependencies=[Depends(verify_token)])
+app.include_router(rearrange_refrigerator.router, dependencies=[Depends(verify_token)])

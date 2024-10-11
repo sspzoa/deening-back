@@ -11,7 +11,7 @@ from app.models.refrigerator.ingredient_detect_models import IngredientDetectRes
 router = APIRouter()
 
 
-@router.post("/refrigerator/ingredient_detect", tags=["Refrigerator"],
+@router.post("/refrigerator/ingredient-detect", tags=["Refrigerator"],
              response_model=IngredientDetectResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": NoIngredientsFoundResponse}})
 async def ingredient_detect(image: UploadFile = File(...)):
@@ -41,8 +41,8 @@ async def ingredient_detect(image: UploadFile = File(...)):
         {{
           "ingredients": []
         }}
-
-        주의: 반드시 다른 텍스트 없이 유효한 JSON 형식으로만 응답해주세요.
+        
+        주의: 반드시 다른 텍스트나 코드블록 없이 유효한 JSON 형식으로만 응답해주세요.
         """
 
         # OpenAI API 호출

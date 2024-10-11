@@ -43,23 +43,23 @@ async def get_ingredients():
             response_model=AddIngredientResponse)
 async def add_ingredients(request: AddIngredientRequest):
     """
-    냉장고에 여러 재료를 추가합니다. 이미 존재하는 재료의 경우 양을 더합니다.
+    냉장고에 여러 재료를 추가합니다. 이미 존재하는 재료의 경우 단위가 같을 때만 양을 더합니다.
     """
     try:
         for ingredient in request.ingredients:
             # 기존 재료 찾기
             existing_ingredient = await refrigerator_collection.find_one(
-                {"name": ingredient.name, "category": ingredient.category})
+                {"name": ingredient.name, "category": ingredient.category, "unit": ingredient.unit})
 
             if existing_ingredient:
-                # 이미 존재하는 재료라면 양을 더함
+                # 이미 존재하는 재료이고 단위가 같다면 양을 더함
                 new_amount = existing_ingredient["amount"] + ingredient.amount
                 await refrigerator_collection.update_one(
-                    {"name": ingredient.name, "category": ingredient.category},
+                    {"_id": existing_ingredient["_id"]},
                     {"$set": {"amount": new_amount}}
                 )
             else:
-                # 새로운 재료라면 추가
+                # 새로운 재료이거나 단위가 다르다면 새로 추가
                 await refrigerator_collection.insert_one(ingredient.dict())
 
         return {"message": "재료가 성공적으로 추가되었습니다."}

@@ -12,7 +12,7 @@ from app.utils.image_utils import download_and_encode_image
 router = APIRouter()
 
 
-@router.post("/recipe/cooking_step", tags=["Recipe"], response_model=CookingStepResponse,
+@router.post("/recipe/cooking-step", tags=["Recipe"], response_model=CookingStepResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 async def get_cooking_step_info(request: CookingStepRequest):
     """
