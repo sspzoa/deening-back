@@ -1,6 +1,5 @@
 import json
 
-from bson import ObjectId
 from fastapi import APIRouter, HTTPException
 
 from app.config import client as openai_client
@@ -10,6 +9,7 @@ from app.models.recipe.ingredient_models import IngredientRequest, Ingredient, I
 from app.utils.image_utils import download_and_encode_image
 
 router = APIRouter()
+
 
 @router.post("/ingredient", tags=["Recipe"], response_model=IngredientResponse,
              responses={400: {"model": ErrorResponse}})
@@ -54,7 +54,6 @@ async def get_or_create_ingredient(request: IngredientRequest):
 
         image_prompt = f"""A high-quality, detailed photo of {ingredient.name}, as described:
 
-        - Category: {ingredient.category}
         - Description: {ingredient.description}
 
         The image should clearly show the ingredient in its natural or commonly found form. 
@@ -81,23 +80,5 @@ async def get_or_create_ingredient(request: IngredientRequest):
         return IngredientResponse(ingredient=ingredient, image_base64=image_base64, id=ingredient_id)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="생성된 식재료 정보를 JSON으로 파싱할 수 없습니다.")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.get("/ingredient/{ingredient_id}", tags=["Recipe"], response_model=IngredientResponse,
-            responses={404: {"model": ErrorResponse}})
-async def get_ingredient_by_id(ingredient_id: str):
-    """
-    주어진 ID에 대한 식재료 정보를 반환합니다.
-    """
-    try:
-        ingredient_data = await ingredient_collection.find_one({"_id": ObjectId(ingredient_id)})
-        if not ingredient_data:
-            raise HTTPException(status_code=404, detail="식재료 정보를 찾을 수 없습니다.")
-
-        image_base64 = ingredient_data.pop('image_base64', None)
-        ingredient_id = str(ingredient_data.pop('_id'))
-        ingredient = Ingredient(**ingredient_data)
-        return IngredientResponse(ingredient=ingredient, image_base64=image_base64, id=ingredient_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

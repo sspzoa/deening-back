@@ -3,8 +3,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app.dependencies.auth import verify_token
 from app.routes import ping, root
-from app.routes.food import ingredient_detect
 from app.routes.recipe import recipe, ingredient, cooking_step
+from app.routes.refrigerator import ingredient_detect
 
 app = FastAPI(
     title="Deening API",

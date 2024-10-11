@@ -1,6 +1,5 @@
 import json
 
-from bson import ObjectId
 from fastapi import APIRouter, HTTPException
 
 from app.config import client as openai_client
@@ -10,6 +9,7 @@ from app.models.recipe.recipe_models import Recipe, RecipeRequest, RecipeRespons
 from app.utils.image_utils import download_and_encode_image
 
 router = APIRouter()
+
 
 @router.post("/recipe", tags=["Recipe"], response_model=RecipeResponse, responses={400: {"model": ErrorResponse}})
 async def get_or_create_recipe(request: RecipeRequest):
@@ -78,10 +78,6 @@ async def get_or_create_recipe(request: RecipeRequest):
         Recipe details:
         - Description: {recipe.description}
         - Main ingredients: {', '.join([ingredient.name for ingredient in recipe.ingredients[:5]])}
-        - Cuisine tags: {', '.join(recipe.tags)}
-
-        The image should clearly show the main ingredients and reflect the cuisine style indicated by the tags. 
-        Ensure the presentation matches the difficulty level of '{recipe.difficulty}' and serves {recipe.servings}.
         """
 
         image_response = openai_client.images.generate(
@@ -93,7 +89,7 @@ async def get_or_create_recipe(request: RecipeRequest):
         )
 
         image_url = image_response.data[0].url
-        image_base64 = 'data:image/png;base64,' +  download_and_encode_image(image_url)  # 이미지 다운로드 및 Base64 인코딩
+        image_base64 = 'data:image/png;base64,' + download_and_encode_image(image_url)  # 이미지 다운로드 및 Base64 인코딩
 
         recipe_dict = recipe.model_dump()
         recipe_dict['image_base64'] = image_base64  # URL 대신 Base64 인코딩된 이미지 저장
@@ -103,22 +99,5 @@ async def get_or_create_recipe(request: RecipeRequest):
         return RecipeResponse(id=recipe_id, recipe=recipe, image_base64=image_base64)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="생성된 레시피를 JSON으로 파싱할 수 없습니다.")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.get("/recipe/{recipe_id}", tags=["Recipe"], response_model=RecipeResponse,
-            responses={404: {"model": ErrorResponse}})
-async def get_recipe_by_id(recipe_id: str):
-    """
-    주어진 ID에 대한 레시피를 반환합니다.
-    """
-    try:
-        recipe_data = await recipe_collection.find_one({"_id": ObjectId(recipe_id)})
-        if not recipe_data:
-            raise HTTPException(status_code=404, detail="레시피를 찾을 수 없습니다.")
-
-        image_base64 = recipe_data.pop('image_base64', None)
-        recipe = Recipe(**recipe_data)
-        return RecipeResponse(id=str(recipe_data['_id']), recipe=recipe, image_base64=image_base64)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

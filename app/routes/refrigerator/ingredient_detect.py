@@ -6,11 +6,12 @@ from fastapi import APIRouter, File, UploadFile, HTTPException
 
 from app.config import client
 from app.models.error_models import ErrorResponse
-from app.models.food.ingredient_detect_models import IngredientDetectResponse, NoIngredientsFoundResponse
+from app.models.refrigerator.ingredient_detect_models import IngredientDetectResponse, NoIngredientsFoundResponse
 
 router = APIRouter()
 
-@router.post("/ingredient_detect", tags=["Food"],
+
+@router.post("/ingredient_detect", tags=["Refrigerator"],
              response_model=IngredientDetectResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": NoIngredientsFoundResponse}})
 async def ingredient_detect(image: UploadFile = File(...)):

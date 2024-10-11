@@ -11,6 +11,7 @@ from app.utils.image_utils import download_and_encode_image
 
 router = APIRouter()
 
+
 @router.post("/cooking_step", tags=["Recipe"], response_model=CookingStepResponse,
              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
 async def get_or_create_cooking_step_info(request: CookingStepRequest):
@@ -42,7 +43,8 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
         recipe_context = {
             "name": recipe['name'],
             "ingredients": recipe['ingredients'],
-            "instructions": recipe['instructions'][request.step_number - 1] if request.step_number <= len(recipe['instructions']) else None
+            "instructions": recipe['instructions'][request.step_number - 1] if request.step_number <= len(
+                recipe['instructions']) else None
         }
 
         cooking_step_prompt = f"""제공된 레시피에 대한 자세한 조리 과정 정보를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
@@ -50,7 +52,7 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
         {{
           "recipe_id": "레시피 ID",
           "step_number": 단계 번호,
-          "description": "조리 과정에 대한 상세한 설명",
+          "description": "조리 과정에 대한 상세한 설명과 팁",
         }}
 
         레시피 ID: {request.recipe_id}
@@ -74,10 +76,8 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
         image_prompt = f"""A high-quality, detailed photo demonstrating the cooking step for {recipe_context['name']}, step number {cooking_step.step_number}:
 
         - Description: {cooking_step.description}
-        - Tools used: {', '.join(cooking_step.tools_needed)}
-        - Ingredients involved: {', '.join(cooking_step.ingredients_used)}
 
-        The image should clearly show the action being performed, with visible ingredients and tools. 
+        The image should clearly show the action being performed.
         Ensure the lighting is bright and even, showcasing the details of the cooking process.
         The image should be from a slightly elevated angle to give a clear view of the cooking surface and the chef's hands (if applicable).
         """
@@ -91,7 +91,7 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
         )
 
         image_url = image_response.data[0].url
-        image_base64 = 'data:image/png;base64,' +  download_and_encode_image(image_url)  # 이미지 다운로드 및 Base64 인코딩
+        image_base64 = 'data:image/png;base64,' + download_and_encode_image(image_url)  # 이미지 다운로드 및 Base64 인코딩
 
         cooking_step_dict = cooking_step.model_dump()
         cooking_step_dict['image_base64'] = image_base64  # URL 대신 Base64 인코딩된 이미지 저장
@@ -101,22 +101,5 @@ async def get_or_create_cooking_step_info(request: CookingStepRequest):
         return CookingStepResponse(id=cooking_step_id, cooking_step=cooking_step, image_base64=image_base64)
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="생성된 조리 과정 정보를 JSON으로 파싱할 수 없습니다.")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-@router.get("/cooking_step/{cooking_step_id}", tags=["Recipe"], response_model=CookingStepResponse,
-            responses={404: {"model": ErrorResponse}})
-async def get_cooking_step_by_id(cooking_step_id: str):
-    """
-    주어진 ID에 대한 조리 단계 정보를 반환합니다.
-    """
-    try:
-        cooking_step_data = await cooking_step_collection.find_one({"_id": ObjectId(cooking_step_id)})
-        if not cooking_step_data:
-            raise HTTPException(status_code=404, detail="조리 단계 정보를 찾을 수 없습니다.")
-
-        image_base64 = cooking_step_data.pop('image_base64', None)
-        cooking_step = CookingStep(**cooking_step_data)
-        return CookingStepResponse(id=str(cooking_step_data['_id']), cooking_step=cooking_step, image_base64=image_base64)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
