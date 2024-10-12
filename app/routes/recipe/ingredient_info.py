@@ -1,9 +1,11 @@
 import json
+import logging
+import re
 
 from fastapi import APIRouter, HTTPException
 
 from app.config import client as openai_client
-from app.database import ingredient_collection
+from app.database import ingredients_info_collection
 from app.models.error_models import ErrorResponse
 from app.models.recipe.ingredient_info_models import IngredientRequest, Ingredient, IngredientResponse
 from app.utils.image_utils import download_and_encode_image
@@ -19,7 +21,7 @@ async def get_ingredient_info(request: IngredientRequest):
     """
     try:
         # 데이터베이스에서 재료 검색
-        ingredient_data = await ingredient_collection.find_one({"name": request.ingredient_name})
+        ingredient_data = await ingredients_info_collection.find_one({"name": request.ingredient_name})
 
         if ingredient_data:
             # 이미 존재하는 재료 정보 반환
@@ -58,7 +60,15 @@ async def get_ingredient_info(request: IngredientRequest):
             ]
         )
 
-        ingredient_json = json.loads(ingredient_response.choices[0].message.content)
+        # ChatGPT 응답 파싱
+        response_content = ingredient_response.choices[0].message.content.strip()
+
+        # 코드 블록 제거 및 JSON 추출
+        json_content = re.search(r'\{[\s\S]*\}', response_content)
+        if json_content:
+            response_content = json_content.group()
+
+        ingredient_json = json.loads(response_content)
         ingredient = Ingredient(**ingredient_json)
 
         image_prompt = f"""Create a high-quality, photorealistic image of {ingredient.name} with the following specifications:
@@ -91,11 +101,14 @@ async def get_ingredient_info(request: IngredientRequest):
 
         ingredient_dict = ingredient.model_dump()
         ingredient_dict['image_base64'] = image_base64  # URL 대신 Base64 인코딩된 이미지 저장
-        result = await ingredient_collection.insert_one(ingredient_dict)
+        result = await ingredients_info_collection.insert_one(ingredient_dict)
         ingredient_id = str(result.inserted_id)
 
         return IngredientResponse(ingredient=ingredient, image_base64=image_base64, id=ingredient_id)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="생성된 식재료 정보를 JSON으로 파싱할 수 없습니다.")
+    
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON decode error: {e}")
+        raise HTTPException(status_code=400, detail=f"생성된 식재료 정보를 JSON으로 파싱할 수 없습니다: {e}")
     except Exception as e:
+        logging.error(f"Unexpected error: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))

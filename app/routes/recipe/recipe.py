@@ -1,4 +1,6 @@
 import json
+import logging
+import re
 
 from fastapi import APIRouter, HTTPException
 
@@ -33,8 +35,6 @@ async def get_recipe(request: RecipeRequest):
           "name": "{request.food_name}",
           "description": "요리에 대한 간단한 설명 (역사, 특징, 맛 등)",
           "cookTime": "총 조리 시간 (예: '1시간 30분')",
-          "difficulty": "난이도 (쉬움, 보통, 어려움 중 하나)",
-          "servings": 몇 인분인지 (정수),
           "nutrition": {{
             "calories": 1인분 기준 칼로리 (정수),
             "protein": "단백질(g)",
@@ -54,12 +54,6 @@ async def get_recipe(request: RecipeRequest):
               "description": "상세한 조리 방법 설명"
             }}
           ],
-          "tips": [
-            "요리 팁이나 중요 포인트 (2-3개)"
-          ],
-          "utensils": [
-            "필요한 조리 도구 목록"
-          ]
         }}
 
         주의사항:
@@ -79,7 +73,15 @@ async def get_recipe(request: RecipeRequest):
             ]
         )
 
-        recipe_json = json.loads(recipe_response.choices[0].message.content)
+        # ChatGPT 응답 파싱
+        response_content = recipe_response.choices[0].message.content.strip()
+
+        # 코드 블록 제거 및 JSON 추출
+        json_content = re.search(r'\{[\s\S]*\}', response_content)
+        if json_content:
+            response_content = json_content.group()
+
+        recipe_json = json.loads(response_content)
         recipe = Recipe(**recipe_json)
 
         image_prompt = f"""Create a high-quality, photorealistic image of {recipe.name} with the following specifications:
@@ -124,7 +126,10 @@ async def get_recipe(request: RecipeRequest):
         recipe_id = str(result.inserted_id)
 
         return RecipeResponse(id=recipe_id, recipe=recipe, image_base64=image_base64)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="생성된 레시피를 JSON으로 파싱할 수 없습니다.")
+
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON decode error: {e}")
+        raise HTTPException(status_code=400, detail=f"생성된 레시피 정보를 JSON으로 파싱할 수 없습니다: {e}")
     except Exception as e:
+        logging.error(f"Unexpected error: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))

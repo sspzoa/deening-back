@@ -1,3 +1,4 @@
+import logging
 from itertools import groupby
 
 from bson import ObjectId
@@ -130,4 +131,5 @@ async def update_ingredient(ingredient_id: str, request: UpdateIngredientRequest
     except HTTPException:
         raise
     except Exception as e:
+        logging.error(f"Unexpected error: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))

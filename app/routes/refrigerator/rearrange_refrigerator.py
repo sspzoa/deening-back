@@ -1,4 +1,6 @@
 import json
+import logging
+import re
 
 from fastapi import APIRouter, HTTPException
 
@@ -60,11 +62,17 @@ async def rearrange_refrigerator():
 
         # ChatGPT 응답 파싱
         response_content = response.choices[0].message.content.strip()
+
+        # 코드 블록 제거 및 JSON 추출
+        json_content = re.search(r'\{[\s\S]*\}', response_content)
+        if json_content:
+            response_content = json_content.group()
+
         try:
             optimized_data = json.loads(response_content)
-        except json.JSONDecodeError:
-            print(f"Failed to parse JSON. Raw response: {response_content}")
-            raise HTTPException(status_code=500, detail="Failed to parse optimization suggestion")
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decode error: {e}")
+            raise HTTPException(status_code=400, detail=f"생성된 정보를 JSON으로 파싱할 수 없습니다: {e}")
 
         if 'categories' not in optimized_data:
             raise HTTPException(status_code=500, detail="Invalid optimization suggestion format")
@@ -103,5 +111,7 @@ async def rearrange_refrigerator():
         )
         return GetIngredientsResponse(refrigerator=refrigerator)
 
+
     except Exception as e:
+        logging.error(f"Unexpected error: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))

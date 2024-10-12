@@ -6,5 +6,5 @@ client = AsyncIOMotorClient(MONGODB_URL)
 db = client.deening
 recipe_collection = db.recipes
 cooking_step_collection = db.cooking_steps
-ingredient_collection = db.ingredients
+ingredients_info_collection = db.ingredients_info
 refrigerator_collection = db.refrigerator

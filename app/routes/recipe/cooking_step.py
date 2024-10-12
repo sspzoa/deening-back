@@ -1,4 +1,6 @@
 import json
+import logging
+import re
 
 from bson import ObjectId
 from fastapi import APIRouter, HTTPException
@@ -10,6 +12,7 @@ from app.models.recipe.cooking_step_models import CookingStepRequest, CookingSte
 from app.utils.image_utils import download_and_encode_image
 
 router = APIRouter()
+logging.basicConfig(level=logging.DEBUG)
 
 
 @router.post("/recipe/cooking-step", tags=["Recipe"], response_model=CookingStepResponse,
@@ -47,10 +50,18 @@ async def get_cooking_step_info(request: CookingStepRequest):
                 recipe['instructions']) else None
         }
 
+        # Format ingredients based on their structure
+        if isinstance(recipe_context['ingredients'][0], dict):
+            formatted_ingredients = ', '.join(
+                [f"{ing.get('name', 'Unknown')} ({ing.get('amount', 'Unknown amount')})" for ing in
+                 recipe_context['ingredients']])
+        else:
+            formatted_ingredients = ', '.join(recipe_context['ingredients'])
+
         cooking_step_prompt = f"""레시피 '{recipe_context['name']}'의 {request.step_number}번째 조리 단계에 대한 상세 정보를 JSON 형식으로 제공해주세요.
 
         레시피 컨텍스트:
-        - 재료: {', '.join(recipe_context['ingredients'])}
+        - 재료: {formatted_ingredients}
         - 현재 단계 지침: {recipe_context['instructions']}
 
         다음 구조를 따라 자세한 정보를 작성해주세요:
@@ -72,8 +83,10 @@ async def get_cooking_step_info(request: CookingStepRequest):
         4. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
         """
 
+        logging.debug(f"Cooking step prompt: {cooking_step_prompt}")
+
         cooking_step_response = openai_client.chat.completions.create(
-            model="chatgpt-4o-latest",
+            model="gpt-4-turbo-preview",
             messages=[
                 {"role": "system",
                  "content": "당신은 세계적인 요리 전문가입니다. 다양한 요리 기법과 재료에 대한 깊은 이해를 바탕으로, 정확하고 유용한 조리 정보를 제공합니다."},
@@ -81,7 +94,30 @@ async def get_cooking_step_info(request: CookingStepRequest):
             ]
         )
 
-        cooking_step_json = json.loads(cooking_step_response.choices[0].message.content)
+        # Log the full response for debugging
+        logging.debug(f"OpenAI API response: {cooking_step_response}")
+
+        # ChatGPT 응답 파싱
+        response_content = cooking_step_response.choices[0].message.content.strip()
+        logging.debug(f"Stripped response content: {response_content}")
+
+        # 코드 블록 제거 및 JSON 추출
+        json_content = re.search(r'\{[\s\S]*\}', response_content)
+        if json_content:
+            response_content = json_content.group()
+            logging.debug(f"Extracted JSON content: {response_content}")
+        else:
+            logging.error("No JSON content found in the response")
+            raise ValueError("No JSON content found in the response")
+
+        try:
+            cooking_step_json = json.loads(response_content)
+        except json.JSONDecodeError as e:
+            logging.error(f"JSON decode error: {e}")
+            raise ValueError(f"Invalid JSON: {e}")
+
+        logging.debug(f"Parsed JSON: {cooking_step_json}")
+
         cooking_step = CookingStep(**cooking_step_json)
 
         image_prompt = f"""Create a photorealistic image for the following cooking step:
@@ -119,7 +155,10 @@ async def get_cooking_step_info(request: CookingStepRequest):
         cooking_step_id = str(result.inserted_id)
 
         return CookingStepResponse(id=cooking_step_id, cooking_step=cooking_step, image_base64=image_base64)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="생성된 조리 과정 정보를 JSON으로 파싱할 수 없습니다.")
+
+    except json.JSONDecodeError as e:
+        logging.error(f"JSON decode error: {e}")
+        raise HTTPException(status_code=400, detail=f"생성된 조리 과정 정보를 JSON으로 파싱할 수 없습니다: {e}")
     except Exception as e:
+        logging.error(f"Unexpected error: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
