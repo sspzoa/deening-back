@@ -5,3 +5,5 @@ openai
 requests
 pydantic
 motor
+pymongo
+starlette

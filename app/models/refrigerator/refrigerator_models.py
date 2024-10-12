@@ -46,3 +46,14 @@ class GetIngredientsResponse(BaseModel):
 class GetIngredientsByCategoryResponse(BaseModel):
     category: str
     ingredients: List[Ingredient]
+
+
+class UpdateIngredientRequest(BaseModel):
+    name: str
+    amount: float
+    unit: str
+    category: str
+
+
+class UpdateIngredientResponse(BaseModel):
+    message: str

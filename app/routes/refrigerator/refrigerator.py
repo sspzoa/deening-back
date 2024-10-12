@@ -6,7 +6,8 @@ from fastapi import HTTPException, APIRouter
 from app.database import refrigerator_collection
 from app.models.error_models import ErrorResponse
 from app.models.refrigerator.refrigerator_models import GetIngredientsResponse, Ingredient, IngredientCategory, \
-    Refrigerator, AddIngredientResponse, AddIngredientRequest, DeleteIngredientResponse
+    Refrigerator, AddIngredientResponse, AddIngredientRequest, DeleteIngredientResponse, UpdateIngredientResponse, \
+    UpdateIngredientRequest
 
 router = APIRouter()
 
@@ -60,7 +61,7 @@ async def add_ingredients(request: AddIngredientRequest):
                 )
             else:
                 # 새로운 재료이거나 단위가 다르다면 새로 추가
-                await refrigerator_collection.insert_one(ingredient.dict())
+                await refrigerator_collection.insert_one(ingredient.model_dump())
 
         return {"message": "재료가 성공적으로 추가되었습니다."}
     except Exception as e:
@@ -88,6 +89,44 @@ async def delete_ingredient(ingredient_id: str):
             raise HTTPException(status_code=404, detail="해당 ID의 재료를 찾을 수 없습니다.")
 
         return {"message": "재료가 성공적으로 삭제되었습니다."}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.patch("/refrigerator/ingredient/{ingredient_id}", tags=["Refrigerator"],
+              response_model=UpdateIngredientResponse,
+              responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+async def update_ingredient(ingredient_id: str, request: UpdateIngredientRequest):
+    """
+    주어진 ID로 냉장고에 있는 재료를 수정합니다.
+    """
+    try:
+        # ObjectId로 변환
+        object_id = ObjectId(ingredient_id)
+    except:
+        raise HTTPException(status_code=404, detail="유효하지 않은 재료 ID입니다.")
+
+    try:
+        # 재료 존재 여부 확인
+        existing_ingredient = await refrigerator_collection.find_one({"_id": object_id})
+        if not existing_ingredient:
+            raise HTTPException(status_code=404, detail="해당 ID의 재료를 찾을 수 없습니다.")
+
+        # 업데이트할 필드 준비
+        update_data = {k: v for k, v in request.model_dump().items() if v is not None}
+
+        # 재료 업데이트
+        result = await refrigerator_collection.update_one(
+            {"_id": object_id},
+            {"$set": update_data}
+        )
+
+        if result.modified_count == 0:
+            return {"message": "변경된 내용이 없습니다."}
+
+        return {"message": "재료가 성공적으로 수정되었습니다."}
     except HTTPException:
         raise
     except Exception as e:

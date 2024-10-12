@@ -47,25 +47,36 @@ async def get_cooking_step_info(request: CookingStepRequest):
                 recipe['instructions']) else None
         }
 
-        cooking_step_prompt = f"""제공된 레시피에 대한 자세한 조리 과정 정보를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
+        cooking_step_prompt = f"""레시피 '{recipe_context['name']}'의 {request.step_number}번째 조리 단계에 대한 상세 정보를 JSON 형식으로 제공해주세요.
 
+        레시피 컨텍스트:
+        - 재료: {', '.join(recipe_context['ingredients'])}
+        - 현재 단계 지침: {recipe_context['instructions']}
+
+        다음 구조를 따라 자세한 정보를 작성해주세요:
         {{
-          "recipe_id": "레시피 ID",
-          "step_number": 단계 번호,
-          "description": "조리 과정에 대한 상세한 설명과 팁",
+          "recipe_id": "{request.recipe_id}",
+          "step_number": {request.step_number},
+          "description": "조리 과정에 대한 상세한 설명. 다음 내용을 포함해주세요:
+            1. 정확한 조리 방법과 기술
+            2. 주의해야 할 점
+            3. 시간이나 온도와 같은 구체적인 수치
+            4. 재료의 상태나 질감에 대한 설명
+            5. 이 단계를 잘 수행하기 위한 팁이나 요령"
         }}
 
-        레시피 ID: {request.recipe_id}
-        단계 번호: {request.step_number}
-        레시피 정보: {json.dumps(recipe_context, ensure_ascii=False)}
-        
-        주의: 반드시 다른 텍스트나 코드블록 없이 유효한 JSON 형식으로만 응답해주세요.
+        주의사항:
+        1. 설명은 초보자도 이해하기 쉽게 상세하고 명확하게 작성해주세요.
+        2. 안전과 관련된 주의사항이 있다면 반드시 포함시켜주세요.
+        3. 요리의 맛과 품질을 향상시킬 수 있는 전문적인 조언을 제공해주세요.
+        4. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
         """
 
         cooking_step_response = openai_client.chat.completions.create(
             model="chatgpt-4o-latest",
             messages=[
-                {"role": "system", "content": "당신은 전문 요리사입니다. 주어진 레시피의 특정 조리 단계에 대한 상세한 정보를 JSON 형식으로 제공합니다."},
+                {"role": "system",
+                 "content": "당신은 세계적인 요리 전문가입니다. 다양한 요리 기법과 재료에 대한 깊은 이해를 바탕으로, 정확하고 유용한 조리 정보를 제공합니다."},
                 {"role": "user", "content": cooking_step_prompt}
             ]
         )
@@ -73,13 +84,22 @@ async def get_cooking_step_info(request: CookingStepRequest):
         cooking_step_json = json.loads(cooking_step_response.choices[0].message.content)
         cooking_step = CookingStep(**cooking_step_json)
 
-        image_prompt = f"""A high-quality, detailed photo demonstrating the cooking step for {recipe_context['name']}, step number {cooking_step.step_number}:
+        image_prompt = f"""Create a photorealistic image for the following cooking step:
 
-        - Description: {cooking_step.description}
+        Recipe: {recipe_context['name']}
+        Step Number: {cooking_step.step_number}
+        Description: {cooking_step.description}
 
-        The image should clearly show the action being performed.
-        Ensure the lighting is bright and even, showcasing the details of the cooking process.
-        The image should be from a slightly elevated angle to give a clear view of the cooking surface and the chef's hands (if applicable).
+        Image requirements:
+        1. Show a close-up, detailed view of the exact action being performed.
+        2. Include the chef's hands and relevant utensils or equipment.
+        3. Ensure the ingredients or dish are clearly visible and identifiable.
+        4. Use bright, even lighting to highlight all details of the cooking process.
+        5. Capture the image from a slightly elevated angle (about 30-45 degrees) to provide a clear view of the cooking surface and action.
+        6. Reflect the correct stage of cooking (e.g., raw ingredients, partially cooked, or finished dish).
+        7. Include any specific visual cues mentioned in the step description (e.g., color changes, texture, or consistency).
+
+        Style: Photorealistic, high-quality food photography suitable for a professional cookbook or culinary website.
         """
 
         image_response = openai_client.images.generate(

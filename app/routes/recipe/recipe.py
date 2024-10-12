@@ -27,14 +27,16 @@ async def get_recipe(request: RecipeRequest):
             return RecipeResponse(id=str(recipe_data['_id']), recipe=recipe, image_base64=image_base64)
 
         # 레시피가 없으면 새로 생성
-        recipe_prompt = f"""제공된 음식 이름에 대한 레시피를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
+        recipe_prompt = f"""'{request.food_name}'에 대한 상세한 레시피를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
 
         {{
-          "name": "레시피 이름",
-          "description": "레시피에 대한 간단한 설명",
-          "cookTime": "조리 시간",
+          "name": "{request.food_name}",
+          "description": "요리에 대한 간단한 설명 (역사, 특징, 맛 등)",
+          "cookTime": "총 조리 시간 (예: '1시간 30분')",
+          "difficulty": "난이도 (쉬움, 보통, 어려움 중 하나)",
+          "servings": 몇 인분인지 (정수),
           "nutrition": {{
-            "calories": 칼로리(정수),
+            "calories": 1인분 기준 칼로리 (정수),
             "protein": "단백질(g)",
             "carbohydrates": "탄수화물(g)",
             "fat": "지방(g)"
@@ -42,42 +44,67 @@ async def get_recipe(request: RecipeRequest):
           "ingredients": [
             {{
               "name": "재료 이름",
-              "amount": 양(숫자),
-              "unit": "단위"
+              "amount": 양 (숫자),
+              "unit": "단위 (g, ml, 개 등)"
             }}
           ],
           "instructions": [
             {{
-              "step": 단계 번호(정수),
-              "description": "단계 설명"
+              "step": 단계 번호 (정수),
+              "description": "상세한 조리 방법 설명"
             }}
           ],
+          "tips": [
+            "요리 팁이나 중요 포인트 (2-3개)"
+          ],
+          "utensils": [
+            "필요한 조리 도구 목록"
+          ]
         }}
 
-        음식 이름: {request.food_name}
-        
-        주의: 반드시 다른 텍스트나 코드블록 없이 유효한 JSON 형식으로만 응답해주세요.
+        주의사항:
+        1. 재료는 최소 5개 이상 포함해주세요.
+        2. 조리 단계는 최소 5단계 이상으로 상세히 설명해주세요.
+        3. 각 단계별 설명은 초보자도 이해할 수 있도록 구체적이고 명확하게 작성해주세요.
+        4. 영양 정보는 1인분 기준으로 제공해주세요.
+        5. 요리 팁은 맛이나 질감을 향상시키는 실용적인 조언을 포함해주세요.
+        6. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
         """
 
         recipe_response = openai_client.chat.completions.create(
             model="chatgpt-4o-latest",
             messages=[
-                {"role": "system", "content": "당신은 요리 전문가입니다. 주어진 음식에 대한 상세한 레시피를 JSON 형식으로 제공합니다."},
+                {"role": "system", "content": "당신은 세계적인 요리 전문가입니다. 다양한 요리법과 식재료에 대한 깊은 이해를 바탕으로, 정확하고 맛있는 레시피를 제공합니다."},
                 {"role": "user", "content": recipe_prompt}
             ]
         )
 
-        print("OpenAI API Response:", recipe_response.choices[0].message.content)
-
         recipe_json = json.loads(recipe_response.choices[0].message.content)
         recipe = Recipe(**recipe_json)
 
-        image_prompt = f"""A high-quality, appetizing photo of {recipe.name}, as described in the recipe. 
-        The dish should look professionally plated and photographed, with attention to detail and presentation.
+        image_prompt = f"""Create a high-quality, photorealistic image of {recipe.name} with the following specifications:
+
+        1. Subject: A beautifully plated dish of {recipe.name}, ready to be served.
+        2. Setting: Place the dish in a context that complements its style and origin (e.g., rustic table for homestyle dishes, elegant setting for gourmet meals).
+        3. Lighting: Use soft, warm lighting to enhance the appetizing appearance of the food.
+        4. Composition: 
+           - The main dish should be the focal point, occupying about 70% of the frame.
+           - Include some garnishes or side elements that complement the main dish.
+           - You may include some background elements to set the scene (e.g., table setting, complementary ingredients).
+        5. Style: Professional food photography style, as if for a high-end restaurant menu or cookbook.
+        6. Details to highlight:
+           - Texture and color of the main ingredients
+           - Any unique features mentioned in the recipe description
+           - Garnishes or toppings that make the dish visually appealing
 
         Recipe details:
         - Description: {recipe.description}
         - Main ingredients: {', '.join([ingredient.name for ingredient in recipe.ingredients[:5]])}
+
+        Additional notes:
+        - Ensure the image looks appetizing and showcases the dish in its best light.
+        - The plating should reflect the style and origin of the dish.
+        - Avoid any text or labels in the image.
         """
 
         image_response = openai_client.images.generate(

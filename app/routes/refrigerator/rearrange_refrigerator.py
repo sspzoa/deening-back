@@ -19,7 +19,7 @@ async def rearrange_refrigerator():
         ingredients = await refrigerator_collection.find().to_list(length=None)
 
         # ChatGPT에 보낼 메시지 준비
-        rearrange_prompt = f"""냉장고 내용물을 최적화하고 재정렬해주세요. 다음 구조를 따르는 JSON 형식으로 응답해주세요:
+        rearrange_prompt = f"""현재 냉장고 내용물을 분석하고, 최적화된 재배치 방안을 JSON 형식으로 제공해주세요. 다음 구조를 따라주세요:
 
         {{
           "categories": [
@@ -45,16 +45,15 @@ async def rearrange_refrigerator():
         } for ing in ingredients], ensure_ascii=False)}
 
         주의사항:
-        1. 카테고리를 최적화하고, 필요한 경우 새로운 카테고리를 만들거나 기존 카테고리를 병합하세요.
-        2. 반드시 다른 텍스트나 코드블록 없이 유효한 JSON 형식으로만 응답해주세요.
+        1. 기존 카테고리를 최대한 유지하되, 필요한 경우 새로운 카테고리를 만들거나 기존 카테고리를 병합하세요.
+        5. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
         """
 
         # ChatGPT로부터 제안 받기
         response = openai_client.chat.completions.create(
             model="chatgpt-4o-latest",
             messages=[
-                {"role": "system",
-                 "content": "You are an expert in food storage and refrigerator organization. Provide detailed and practical advice for optimizing refrigerator contents."},
+                {"role": "system", "content": "당신은 식품 보관 및 냉장고 정리 전문가입니다. 식재료의 특성을 고려하여 최적의 보관 방법과 냉장고 정리 방안을 제시합니다."},
                 {"role": "user", "content": rearrange_prompt}
             ]
         )
