@@ -32,6 +32,7 @@ class Recipe(BaseModel):
 
 class RecipeRequest(BaseModel):
     food_name: str
+    use_refrigerator: bool = False
 
 
 class RecipeResponse(BaseModel):

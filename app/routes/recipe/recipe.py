@@ -5,7 +5,7 @@ import re
 from fastapi import APIRouter, HTTPException
 
 from app.config import client as openai_client
-from app.database import recipe_collection
+from app.database import recipe_collection, refrigerator_collection, preference_collection
 from app.models.error_models import ErrorResponse
 from app.models.recipe.recipe_models import Recipe, RecipeRequest, RecipeResponse
 from app.utils.image_utils import download_and_encode_image
@@ -17,6 +17,7 @@ router = APIRouter()
 async def get_recipe(request: RecipeRequest):
     """
     주어진 음식 이름에 대한 레시피를 검색하거나 생성합니다.
+    사용자의 선호도를 반영하고, 선택적으로 냉장고 재료만 사용하도록 설정할 수 있습니다.
     """
     try:
         # 데이터베이스에서 레시피 검색
@@ -28,9 +29,37 @@ async def get_recipe(request: RecipeRequest):
             recipe = Recipe(**recipe_data)
             return RecipeResponse(id=str(recipe_data['_id']), recipe=recipe, image_base64=image_base64)
 
-        # 레시피가 없으면 새로 생성
-        recipe_prompt = f"""'{request.food_name}'에 대한 상세한 레시피를 JSON 형식으로 생성해주세요. 다음 구조를 따라주세요:
+        # 선호도 정보 가져오기
+        preferences = await preference_collection.find().to_list(length=None)
+        preference_info = ""
+        if preferences:
+            like_keywords = [p["name"] for p in preferences if p["type"] == "like"]
+            dislike_keywords = [p["name"] for p in preferences if p["type"] == "dislike"]
+            preference_info = f"""
+            선호하는 재료/맛: {', '.join(like_keywords)}
+            기피하는 재료/맛: {', '.join(dislike_keywords)}
+            """
 
+        # 냉장고 재료 정보 가져오기
+        refrigerator_info = ""
+        if request.use_refrigerator:
+            ingredients = await refrigerator_collection.find().to_list(length=None)
+            if ingredients:
+                available_ingredients = [f"{i['name']} ({i['amount']}{i['unit']})" for i in ingredients]
+                refrigerator_info = f"""
+                사용 가능한 재료:
+                {', '.join(available_ingredients)}
+                
+                위 재료들만 사용하여 레시피를 만들어주세요.
+                """
+
+        # 레시피 생성 프롬프트
+        recipe_prompt = f"""'{request.food_name}'에 대한 상세한 레시피를 JSON 형식으로 생성해주세요.
+
+        {preference_info}
+        {refrigerator_info}
+
+        다음 구조를 따라주세요:
         {{
           "name": "{request.food_name}",
           "description": "요리에 대한 간단한 설명 (역사, 특징, 맛 등)",
@@ -53,7 +82,7 @@ async def get_recipe(request: RecipeRequest):
               "step": 단계 번호 (정수),
               "description": "상세한 조리 방법 설명"
             }}
-          ],
+          ]
         }}
 
         주의사항:
@@ -61,8 +90,9 @@ async def get_recipe(request: RecipeRequest):
         2. 조리 단계는 최소 5단계 이상으로 상세히 설명해주세요.
         3. 각 단계별 설명은 초보자도 이해할 수 있도록 구체적이고 명확하게 작성해주세요.
         4. 영양 정보는 1인분 기준으로 제공해주세요.
-        5. 요리 팁은 맛이나 질감을 향상시키는 실용적인 조언을 포함해주세요.
-        6. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
+        5. 선호도 정보를 고려하여 레시피를 조정해주세요.
+        6. 냉장고 재료 사용이 지정된 경우, 해당 재료들만 사용하여 레시피를 만들어주세요.
+        7. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
         """
 
         recipe_response = openai_client.chat.completions.create(
