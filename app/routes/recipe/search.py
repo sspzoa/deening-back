@@ -13,12 +13,6 @@ async def search_recipes(query: str):
     """
     주어진 검색어로 레시피를 검색합니다.
     검색은 레시피 이름과 설명을 대상으로 수행됩니다.
-
-    Args:
-        query (str): 검색할 키워드
-
-    Returns:
-        SearchResponse: 검색 결과 목록
     """
     try:
         # 검색어가 비어있는 경우 처리
