@@ -41,7 +41,7 @@ async def search_recipes(query: str):
             RecipeSimple(
                 id=str(recipe["_id"]),
                 name=recipe["name"],
-                image_url=recipe.get("image_base64", "")  # Base64 이미지 URL 사용
+                image_base64=recipe.get("image_base64", "")  # Base64 이미지 사용
             )
             for recipe in search_results
         ]

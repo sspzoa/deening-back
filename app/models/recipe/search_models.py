@@ -10,7 +10,7 @@ class SearchRequest(BaseModel):
 class RecipeSimple(BaseModel):
     id: str
     name: str
-    image_url: str
+    image_base64: str
 
 
 class SearchResponse(BaseModel):
