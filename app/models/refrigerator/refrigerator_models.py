@@ -1,6 +1,8 @@
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel
+
+StorageType = Literal["REFRIGERATED", "FROZEN", "ROOM_TEMP"]
 
 
 class Ingredient(BaseModel):
@@ -9,6 +11,7 @@ class Ingredient(BaseModel):
     amount: float
     unit: str
     category: str
+    storage_type: StorageType
 
 
 class AddIngredientForm(BaseModel):
@@ -16,6 +19,7 @@ class AddIngredientForm(BaseModel):
     amount: float
     unit: str
     category: str
+    storage_type: StorageType
 
 
 class AddIngredientRequest(BaseModel):
@@ -49,10 +53,11 @@ class GetIngredientsByCategoryResponse(BaseModel):
 
 
 class UpdateIngredientRequest(BaseModel):
-    name: str
-    amount: float
-    unit: str
-    category: str
+    name: str | None = None
+    amount: float | None = None
+    unit: str | None = None
+    category: str | None = None
+    storage_type: StorageType | None = None
 
 
 class UpdateIngredientResponse(BaseModel):

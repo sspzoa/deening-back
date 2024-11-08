@@ -32,7 +32,16 @@ async def get_ingredients():
         # 카테고리별로 그룹화
         grouped_ingredients = []
         for category, items in groupby(sorted_ingredients, key=lambda x: x["category"]):
-            category_ingredients = [Ingredient(id=str(item["_id"]), **item) for item in items]
+            category_ingredients = [
+                Ingredient(
+                    id=str(item["_id"]),
+                    name=item["name"],
+                    amount=item["amount"],
+                    unit=item["unit"],
+                    category=item["category"],
+                    storage_type=item.get("storage_type", "REFRIGERATED")
+                ) for item in items
+            ]
             grouped_ingredients.append(IngredientCategory(category=category, ingredients=category_ingredients))
 
         refrigerator = Refrigerator(categories=grouped_ingredients)
@@ -45,23 +54,27 @@ async def get_ingredients():
             response_model=AddIngredientResponse)
 async def add_ingredients(request: AddIngredientRequest):
     """
-    냉장고에 여러 재료를 추가합니다. 이미 존재하는 재료의 경우 단위가 같을 때만 양을 더합니다.
+    냉장고에 여러 재료를 추가합니다. 이미 존재하는 재료의 경우 단위와 보관 타입이 같을 때만 양을 더합니다.
     """
     try:
         for ingredient in request.ingredients:
-            # 기존 재료 찾기
-            existing_ingredient = await refrigerator_collection.find_one(
-                {"name": ingredient.name, "category": ingredient.category, "unit": ingredient.unit})
+            # 기존 재료 찾기 - 보관 타입도 확인
+            existing_ingredient = await refrigerator_collection.find_one({
+                "name": ingredient.name,
+                "category": ingredient.category,
+                "unit": ingredient.unit,
+                "storage_type": ingredient.storage_type
+            })
 
             if existing_ingredient:
-                # 이미 존재하는 재료이고 단위가 같다면 양을 더함
+                # 이미 존재하는 재료이고 단위와 보관 타입이 같다면 양을 더함
                 new_amount = existing_ingredient["amount"] + ingredient.amount
                 await refrigerator_collection.update_one(
                     {"_id": existing_ingredient["_id"]},
                     {"$set": {"amount": new_amount}}
                 )
             else:
-                # 새로운 재료이거나 단위가 다르다면 새로 추가
+                # 새로운 재료이거나 단위/보관 타입이 다르다면 새로 추가
                 await refrigerator_collection.insert_one(ingredient.model_dump())
 
         return {"message": "재료가 성공적으로 추가되었습니다."}

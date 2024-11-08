@@ -31,7 +31,8 @@ async def rearrange_refrigerator():
                 {{
                   "name": "재료명",
                   "amount": 수량,
-                  "unit": "단위"
+                  "unit": "단위",
+                  "storage_type": "보관 타입"
                 }}
               ],
             }}
@@ -43,12 +44,14 @@ async def rearrange_refrigerator():
             "name": ing["name"],
             "amount": ing["amount"],
             "unit": ing["unit"],
-            "category": ing["category"]
+            "category": ing["category"],
+            "storage_type": ing.get("storage_type", "REFRIGERATED")
         } for ing in ingredients], ensure_ascii=False)}
 
         주의사항:
         1. 기존 카테고리를 최대한 유지하되, 필요한 경우 새로운 카테고리를 만들거나 기존 카테고리를 병합하세요.
-        2. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
+        2. storage_type은 "REFRIGERATED", "FROZEN", "ROOM_TEMP" 중 하나여야 합니다.
+        3. 반드시 유효한 JSON 형식으로만 응답해주세요. 추가 설명이나 주석은 불필요합니다.
         """
 
         # ChatGPT로부터 제안 받기
