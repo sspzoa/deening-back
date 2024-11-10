@@ -13,7 +13,7 @@ router = APIRouter()
 @router.post("/recipe/replace-ingredient", tags=["Recipe"], response_model=ReplaceIngredientResponse)
 async def replace_ingredient(request: ReplaceIngredientRequest):
     """
-    레시피의 특정 재료에 대한 대체 재료를 추천합니다.
+    레시피의 특정 재료에 대한 대체 재료를 추천하고 맛의 변화를 설명합니다.
     """
     try:
         # 데이터베이스에서 레시피 검색
@@ -26,8 +26,8 @@ async def replace_ingredient(request: ReplaceIngredientRequest):
         if not ingredient_exists:
             raise HTTPException(status_code=404, detail="지정된 재료를 레시피에서 찾을 수 없습니다.")
 
-        # 대체 재료 추천을 위한 프롬프트
-        prompt = f"""다음 레시피의 '{request.ingredient_name}'를 대체할 수 있는 가장 적합한 재료 하나만 추천해주세요.
+        # 대체 재료 및 맛 변화 설명을 위한 프롬프트
+        prompt = f"""다음 레시피의 '{request.ingredient_name}'를 대체할 수 있는 가장 적합한 재료와 그로 인한 맛의 변화를 설명해주세요.
 
         레시피: {recipe['name']}
         레시피 설명: {recipe['description']}
@@ -39,7 +39,11 @@ async def replace_ingredient(request: ReplaceIngredientRequest):
         2. 레시피의 전반적인 특성을 해치지 않는 재료
         3. 조리 방법이 크게 달라지지 않는 재료
         
-        재료 이름만 답변해주세요.
+        다음 JSON 형식으로 답변해주세요:
+        {{
+            "replaced_ingredient": "대체 재료 이름",
+            "taste_change_description": "맛의 변화에 대한 설명"
+        }}
         """
 
         response = openai_client.chat.completions.create(
@@ -51,8 +55,13 @@ async def replace_ingredient(request: ReplaceIngredientRequest):
             temperature=0.7
         )
 
-        replaced_ingredient = response.choices[0].message.content.strip()
-        return ReplaceIngredientResponse(replaced_ingredient=replaced_ingredient)
+        result = response.choices[0].message.content.strip()
+        result_json = eval(result)  # JSON 파싱
+
+        return ReplaceIngredientResponse(
+            replaced_ingredient=result_json["replaced_ingredient"],
+            taste_change_description=result_json["taste_change_description"]
+        )
 
     except Exception as e:
         logging.error(f"Unexpected error: {e}", exc_info=True)
